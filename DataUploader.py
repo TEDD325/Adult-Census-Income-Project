@@ -1,6 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine
-from utils.Utils import Utils
+from Utils import Utils
 
 
 def upload_to_db(yaml_file_path: str, data_path: str, table_name: str):

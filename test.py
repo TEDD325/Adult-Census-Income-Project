@@ -1,5 +1,4 @@
-from utils.DataUploader import *
-from utils.DataReader import *
+from DataReader import *
 import pprint
 
 # global variable

@@ -2,7 +2,7 @@ import multiprocessing
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-from utils.Utils import Utils
+from Utils import Utils
 
 n_cpus = multiprocessing.cpu_count() - 1
 
@@ -19,7 +19,7 @@ def read_from_db(yaml_file_path: str, table_name: str, label_col_name: str):
         data = pd.read_sql(text(sql_for_data), con=conn)
         test = pd.read_sql(text(sql_for_test), con=conn)
         label = data[label_col_name]
+
+        return data, test, label
     except:
         print('Occurred Error caused by Reading from db')
-
-    return data, test, label
