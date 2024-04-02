@@ -1,9 +1,10 @@
 import os
 from os.path import join
 import warnings
+
+from utils import DataReader
+
 warnings.filterwarnings("ignore")
-# from utils.Utils import *
-from utils.DataReader import *
 import pprint
 
 yaml_file_path = '../info.yaml'
@@ -18,7 +19,7 @@ def display_info(obj: object, title: str = ""):
 ROOT_PATH = os.getcwd()
 train_data_path = join(ROOT_PATH, '../data/', 'train.csv')
 
-train_data, test, label = read_from_db(
+train_data, test, label = DataReader.read_from_db(
     yaml_file_path=yaml_file_path,
     table_name="adult_income",
     label_col_name=target_col)

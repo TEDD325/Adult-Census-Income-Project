@@ -1,12 +1,10 @@
 import pandas as pd
-from utils.Utils import *
 from sqlalchemy import create_engine
-import multiprocessing
+from utils.Utils import Utils
 
-n_cpus = multiprocessing.cpu_count() - 1
 
 def upload_to_db(yaml_file_path: str, data_path: str, table_name: str):
-    global_info = read_yaml(yaml_file_path)
+    global_info = Utils.read_yaml()(yaml_file_path)
 
     try:
         engine = create_engine(url='postgresql+psycopg2://'+global_info['db']['id']+':'+global_info['db']['pw']+'@'+global_info['db']['host']+':'+global_info['db']['port']+'/'+global_info['db']['table'])
