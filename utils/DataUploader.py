@@ -1,14 +1,9 @@
 import pandas as pd
-import yaml
-from sqlalchemy import create_engine, text
+from Utils import *
+from sqlalchemy import create_engine
 import multiprocessing
 
 n_cpus = multiprocessing.cpu_count() - 1
-
-def read_yaml(file_path: str):
-    with open(file_path, 'r') as file:
-        data = yaml.safe_load(file)
-    return data
 
 def upload_to_db(yaml_file_path: str, data_path: str, table_name: str):
     global_info = read_yaml(yaml_file_path)
