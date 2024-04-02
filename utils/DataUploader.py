@@ -1,5 +1,5 @@
 import pandas as pd
-from Utils import *
+from utils.Utils import *
 from sqlalchemy import create_engine
 import multiprocessing
 
