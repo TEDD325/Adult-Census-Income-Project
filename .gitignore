@@ -4,3 +4,4 @@ data/
 .idea/
 poetry.lock
 pyproject.toml
+info.yaml

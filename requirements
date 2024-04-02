@@ -1,3 +1,5 @@
 poetry
 numpy
 pandas
+pyyaml
+psycopg2-binary
