@@ -18,6 +18,9 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 from lightgbm import LGBMClassifier
+from sklearn.svm import SVC
+from catboost import CatBoostClassifier
+
 
 def set_initial_setting():
     warnings.filterwarnings(action='ignore')
@@ -62,12 +65,17 @@ if __name__ == "__main__":
 
 
     # 모델 학습
-    lgb = LGBMClassifier(n_estimators=100)
-    lgb.fit(x_train, y_train)
-    
-    # 예측
-    y_pred=lgb.predict(test)
-    # 제출을 위해 test를 넣어야 하나?
+    # lgb = LGBMClassifier(n_estimators=100)
+    # lgb.fit(x_train, y_train)
+    # y_pred = lgb.predict(test)
+    # svc = SVC(class_weight='balanced')
+    # svc.fit(x_train, y_train)
+    # y_pred = svc.predict(x_valid)
+    catboost_model = CatBoostClassifier(iterations=1000, learning_rate=0.001, depth=10, random_state=42)
+    catboost_model.fit(x_train, y_train, verbose=100)
+    y_pred = catboost_model.predict(test)
+    # accuracy = accuracy_score(y_valid, y_pred)
+
 
     # y_pred = pd.DataFrame([test_id, y_pred], columns=['id', 'target'])
     test_id_df = pd.DataFrame(test_id, columns=['id'])
@@ -75,21 +83,24 @@ if __name__ == "__main__":
     submit = pd.concat([test_id_df, y_pred], axis=1)
 
     # 제출 csv 생성
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    # if not os.path.exists(log_dir):
+    #     os.makedirs(log_dir)
 
-    if not os.path.exists(submission_file):
-        with open(submission_file, 'w'):
-            pass
+    # if not os.path.exists(submission_file):
+    #     with open(submission_file, 'w'):
+    #         pass
 
-    # submission = pd.read_csv(data_path+'sample_submission.csv') # sample_submission.csv는 프로젝트 폴더에 두었음
-    # submission['target'] = y_pred
-    # submission.to_csv('submit.csv', index=False)
+    submission = pd.read_csv(os.path.dirname(os.path.realpath(__file__))+'/data/sample_submission.csv') # sample_submission.csv는 프로젝트 폴더에 두었음
+    submission = submission.drop('target', axis=1)
+    submit_with_target = pd.merge(submission, submit, on='id', how='inner')
+    merged_df = submit_with_target.drop_duplicates(subset=['id'])
+    # final_submission = submit_with_target[['id', 'target']]
+    merged_df.to_csv(os.path.dirname(os.path.realpath(__file__))+'/data/submission.csv', index=False)
     # submit = pd.read_csv(data_path+'submission.csv')
     # submit['target'] = y_pred
     # submit = pd.DataFrame(y_pred, columns=['target'])
-    submit.reset_index()
-    submit.to_csv(os.path.dirname(os.path.realpath(__file__))+'/data/submission.csv', index=False)
+    # submit.reset_index()
+    # submit.to_csv(os.path.dirname(os.path.realpath(__file__))+'/data/submission.csv', index=False)
 
     # print("정확도: {:.2f}%".format(accuracy_score(y_valid, y_pred)*100))
     # 사이트 에서의 결과와 로컬 결과가 다른건가?

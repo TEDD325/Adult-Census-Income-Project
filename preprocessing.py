@@ -136,6 +136,7 @@ def standard_scaler(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', viz_available: bool = False, viz_bins: int = 40) -> pd.DataFrame:
     result = df.copy()
+    result.drop('id', axis=1, inplace=True)
 
     try:
         if strategy == 'L': # Log
@@ -172,6 +173,7 @@ def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', vi
     else:
         print('System: Please appropriate strategy.')
 
+    result = pd.concat([df['id'], result], axis=1)
     return result
 
 # def control_imbalance(train_data: pd.DataFrame, label: pd.Series, seed: int = 42) -> pd.DataFrame:
@@ -225,7 +227,7 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     num_columns = train_data.select_dtypes(exclude='object').columns
 
     # train에만 존재하는 샘플값 삭제
-    train_data.drop(index=8335, axis =0, inplace= True)
+    # train_data.drop(index=8335, axis =0, inplace= True)
 
     if verbose == 2:
         eda_result_print(train_data, test, label, num_columns, cat_columns)
@@ -328,10 +330,9 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='Q', viz_available=True)
     test = numeric_transformer(df=test, columns=num_columns, strategy='Q', viz_available=True)
 
-    # train_data, label = control_imbalance(train_data=train_data, label=label)
+    train_data, label = control_imbalance(train_data=train_data, label=label)
 
 
-    print("Debugging Point")
 
 
 
