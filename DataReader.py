@@ -19,6 +19,7 @@ def read_from_db(yaml_file_path: str, table_name: str, label_col_name: str):
         data = pd.read_sql(text(sql_for_data), con=conn)
         test = pd.read_sql(text(sql_for_test), con=conn)
         label = data[label_col_name]
+        data.drop(columns=[label_col_name], inplace=True)
 
         return data, test, label
     except:

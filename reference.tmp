@@ -1,0 +1,26 @@
+# Server
+## for dohk
+conda environment: mle_course
+## for sumin
+?
+
+# Library
+poetry
+numpy
+pandas
+pyyaml
+psycopg2-binary
+seaborn
+matplotlib
+xgboost
+lightgbm
+catboost
+scikit-learn
+
+# LightGBM
+git clone --recursive https://github.com/microsoft/LightGBM
+cd LightGBM
+mkdir build
+cd build
+cmake ..
+make -j4
