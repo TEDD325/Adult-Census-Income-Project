@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from imblearn.over_sampling import SMOTE
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, StandardScaler, PowerTransformer, QuantileTransformer
 
 
 def set_initial_setting():
@@ -118,6 +118,56 @@ def ordinal_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
     return result
 
+def standard_scaler(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    # result = df.copy()
+    target_df = df.loc[:, columns]
+    scaler = StandardScaler()
+
+    scaler.fit(target_df)
+    scaled_data = scaler.transform(target_df)
+    result = pd.DataFrame(scaled_data, columns=columns)
+
+    return result
+
+def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', viz_available: bool = False, viz_bins: int = 40) -> pd.DataFrame:
+    result = df.copy()
+
+    try:
+        if strategy == 'L': # Log
+            for col in columns:
+                result[col] = np.log1p(result[col])
+                if viz_available:
+                    result[col].hist(bins=viz_bins)
+
+        if strategy == 'B': # Box-Cox
+            trans = PowerTransformer(method='box-cox')
+            for col in columns:
+                result[col] = trans.fit_transform(result[col].values.reshape(-1, 1) + 1)
+                if viz_available:
+                    result[col].hist(bins=viz_bins)
+    except ValueError:
+        print("ValueError: The Box-Cox transformation can only be applied to strictly positive data.")
+        print("System: Automatically change strategy as 'Quantile'")
+        strategy = 'Q'
+
+    if strategy == 'Y': # Yeo-Johnson
+        trans = PowerTransformer(method='yeo-johnson')
+        for col in columns:
+            result[col] = trans.fit_transform(result[col].values.reshape(-1, 1))
+            if viz_available:
+                result[col].hist(bins=viz_bins)
+
+    elif strategy == 'Q': # Quantile
+        trans = QuantileTransformer(output_distribution='normal')
+        for col in columns:
+            result[col] = trans.fit_transform(result[col].values.reshape(-1, 1))
+            if viz_available:
+                result[col].hist(bins=viz_bins)
+
+    else:
+        print('System: Please appropriate strategy.')
+
+    return result
 
 def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_col: str, verbose: int = 0):
     # yaml_file_path = os.path.dirname(os.path.realpath(__file__)) + '/info.yaml'
@@ -235,12 +285,22 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     encoded_ordinal_test_data = ordinal_encoder(encoded_onehot_test_data, ['education'])
     test = encoded_ordinal_test_data
     test.reset_index(inplace=True)
-    test.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
+    drop_col = ['index', 'id', 'level_0']
+    test.drop(drop_col, axis=1, inplace=True)
+    for col in drop_col:
+        if col in num_columns:
+            num_columns = num_columns.drop(col)
+
+    train_data = standard_scaler(train_data, num_columns)
+    test = standard_scaler(test, num_columns)
+
+    # train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='B', viz_available=True)
+    # test = numeric_transformer(df=test, columns=num_columns, strategy='B', viz_available=True)
 
 
 
-    # SMOTE를 적용하려면 인코딩이 끝나야 한다.
-    # SMOTE 객체 생성
+    # # SMOTE를 적용하려면 인코딩이 끝나야 한다.
+    # # SMOTE 객체 생성
     # smote = SMOTE(random_state=42)
     #
     # # SMOTE를 적용할 데이터 준비
@@ -248,9 +308,11 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     #
     # # 샘플링된 데이터로 데이터프레임 생성 (예시)
     # resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
-    # # resampled_df[target_col] = resampled_label
 
     # 인덱스, id 제거 필요한데 어느 단계에서 하지?
 
-    return train_data, test, label
     print("Debugging Point")
+
+
+
+    return train_data, test, label
