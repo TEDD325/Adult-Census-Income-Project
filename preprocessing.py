@@ -120,6 +120,7 @@ def ordinal_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 def standard_scaler(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     result = df.copy()
+    result.drop('id', axis=1, inplace=True)
     target_df = result.loc[:, columns]
     scaler = StandardScaler()
 
@@ -130,7 +131,7 @@ def standard_scaler(df: pd.DataFrame, columns: list) -> pd.DataFrame:
         result[col] = scaled_data_df[col]
 
     # result = pd.concat([result, scaled_data_df])
-
+    result = pd.concat([df['id'], result], axis=1)
     return result
 
 def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', viz_available: bool = False, viz_bins: int = 40) -> pd.DataFrame:
@@ -173,12 +174,35 @@ def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', vi
 
     return result
 
-def control_imbalance(train_data: pd.DataFrame, label: pd.Series, seed: int = 42) -> pd.DataFrame:
+# def control_imbalance(train_data: pd.DataFrame, label: pd.Series, seed: int = 42) -> pd.DataFrame:
+#     smote = SMOTE(random_state=seed)
+#     resampled_train, resampled_label = smote.fit_resample(train_data, label)
+#     resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
+#
+#     return resampled_train
+
+def control_imbalance(train_data: pd.DataFrame, label: pd.Series, seed: int = 42):
     smote = SMOTE(random_state=seed)
     resampled_train, resampled_label = smote.fit_resample(train_data, label)
     resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
+    resampled_label = pd.Series(resampled_label, name=label.name)
+    return resampled_train, resampled_label
 
-    return resampled_train
+def run_encoding(df: pd.DataFrame, drop_col: list) -> pd.DataFrame:
+    drop_col = ['index', 'id', 'level_0']
+    encoded_labelling_data = df.copy()
+    encoded_labelling_data.reset_index(inplace=True)
+    encoded_labelling_data.drop(drop_col, axis=1, inplace=True)
+
+    encoded_labelling_data = label_encoder(df=encoded_labelling_data,
+                                           columns=['workclass', 'marital_status', 'occupation', 'relationship',
+                                                    'race',
+                                                    'native_country'])
+    encoded_onehot_data = one_hot_encoder(df=encoded_labelling_data, columns=['sex'])
+    encoded_ordinal_data = ordinal_encoder(df=encoded_onehot_data, columns=['education'])
+    encoded_data = pd.concat([df['id'], encoded_ordinal_data], axis=1)
+
+    return encoded_data
 
 def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_col: str, verbose: int = 0):
     # yaml_file_path = os.path.dirname(os.path.realpath(__file__)) + '/info.yaml'
@@ -199,6 +223,9 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     # 범주형, 수치형 변수 분리
     cat_columns = train_data.select_dtypes(include='object').columns
     num_columns = train_data.select_dtypes(exclude='object').columns
+
+    # train에만 존재하는 샘플값 삭제
+    train_data.drop(index=8335, axis =0, inplace= True)
 
     if verbose == 2:
         eda_result_print(train_data, test, label, num_columns, cat_columns)
@@ -287,24 +314,10 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     , Ordinal: 순서가 중요한 경우: education
     '''
 
-    encoded_labelling_train_data = label_encoder(df=train_data,
-                                                 columns=['workclass', 'marital_status', 'occupation', 'relationship', 'race',
-                                                  'native_country'])
-    encoded_onehot_train_data = one_hot_encoder(df=encoded_labelling_train_data, columns=['sex'])
-    encoded_ordinal_train_data = ordinal_encoder(df=encoded_onehot_train_data, columns=['education'])
-    train_data = encoded_ordinal_train_data
-    train_data.reset_index(inplace=True)
-    train_data.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
-
-    encoded_labelling_test_data = label_encoder(df=test,
-                                                 columns=['workclass', 'marital_status', 'occupation', 'relationship', 'race',
-                                                  'native_country'])
-    encoded_onehot_test_data = one_hot_encoder(df=encoded_labelling_test_data, columns=['sex'])
-    encoded_ordinal_test_data = ordinal_encoder(df=encoded_onehot_test_data, columns=['education'])
-    test = encoded_ordinal_test_data
-    test.reset_index(inplace=True)
     drop_col = ['index', 'id', 'level_0']
-    test.drop(drop_col, axis=1, inplace=True)
+    train_data = run_encoding(train_data, drop_col)
+    test = run_encoding(test, drop_col)
+
     for col in drop_col:
         if col in num_columns:
             num_columns = num_columns.drop(col)
@@ -315,7 +328,8 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='Q', viz_available=True)
     test = numeric_transformer(df=test, columns=num_columns, strategy='Q', viz_available=True)
 
-    train_data = control_imbalance(train_data=train_data, label=label)
+    # train_data, label = control_imbalance(train_data=train_data, label=label)
+
 
     print("Debugging Point")
 
