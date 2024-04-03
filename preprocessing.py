@@ -119,13 +119,17 @@ def ordinal_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return result
 
 def standard_scaler(df: pd.DataFrame, columns: list) -> pd.DataFrame:
-    # result = df.copy()
-    target_df = df.loc[:, columns]
+    result = df.copy()
+    target_df = result.loc[:, columns]
     scaler = StandardScaler()
 
     scaler.fit(target_df)
     scaled_data = scaler.transform(target_df)
-    result = pd.DataFrame(scaled_data, columns=columns)
+    scaled_data_df = pd.DataFrame(scaled_data, columns=columns)
+    for col in columns:
+        result[col] = scaled_data_df[col]
+
+    # result = pd.concat([result, scaled_data_df])
 
     return result
 
@@ -294,8 +298,8 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     train_data = standard_scaler(train_data, num_columns)
     test = standard_scaler(test, num_columns)
 
-    # train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='B', viz_available=True)
-    # test = numeric_transformer(df=test, columns=num_columns, strategy='B', viz_available=True)
+    train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='Q', viz_available=True)
+    test = numeric_transformer(df=test, columns=num_columns, strategy='Q', viz_available=True)
 
 
 
