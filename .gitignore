@@ -6,3 +6,6 @@ poetry.lock
 pyproject.toml
 info.yaml
 __pycache__/
+eda_example/
+.gitignore
+**/*.csv
