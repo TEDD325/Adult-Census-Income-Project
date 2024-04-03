@@ -1,4 +1,5 @@
 from DataReader import *
+from DataUploader import *
 import pprint
 
 # global variable
@@ -7,7 +8,7 @@ data_path = './data/'
 target_col = 'target'
 
 # ##### uploading data to PoestgreDB
-# upload_to_db(yaml_file_path=yaml_file_path, data_path=data_path, table_name="adult_income")
+upload_to_db(yaml_file_path=yaml_file_path, data_path=data_path, table_name="adult_income")
 
 # ##### Read data from PoestgreDB
 data, test, label = read_from_db(

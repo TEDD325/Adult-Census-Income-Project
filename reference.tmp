@@ -16,6 +16,7 @@ xgboost
 lightgbm
 catboost
 scikit-learn
+imbalanced-learn
 
 # LightGBM
 git clone --recursive https://github.com/microsoft/LightGBM
