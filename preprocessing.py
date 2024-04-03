@@ -185,9 +185,12 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     train_data = tmp_train_data
 
     drop_col = 'fnlwgt'
-    train_data.drop(drop_col, axis=1, inplace=True)
-    test.drop(drop_col, axis=1, inplace=True)
-    num_columns = num_columns.drop(drop_col)
+    try:
+        train_data.drop(drop_col, axis=1, inplace=True)
+        test.drop(drop_col, axis=1, inplace=True)
+        num_columns = num_columns.drop(drop_col)
+    except KeyError:
+        print(f'KeyError: [{drop_col}] not found in axis"')
 
     if verbose == 1:
         eda_result_print(train_data, test, label, num_columns, cat_columns, target_col)
@@ -204,7 +207,8 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     '''
 
     # ENCODING
-    print(' ##### Encdoing ##### ')
+    if verbose == 1:
+        print(' ##### Encdoing ##### ')
     # categorical column들 중 어느 컬럼에 어느 방법을 적용해야 하는가?
     '''Index(['workclass', 'education', 'marital_status', 'occupation',
        'relationship', 'race', 'sex', 'native_country'],
@@ -215,12 +219,24 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     , Ordinal: 순서가 중요한 경우: education
     '''
 
-    encoded_labelling_train_data = label_encoder(train_data, ['workclass', 'marital_status', 'occupation', 'relationship', 'race', 'native_country'])
+    encoded_labelling_train_data = label_encoder(train_data,
+                                                 ['workclass', 'marital_status', 'occupation', 'relationship', 'race',
+                                                  'native_country'])
     encoded_onehot_train_data = one_hot_encoder(encoded_labelling_train_data, ['sex'])
     encoded_ordinal_train_data = ordinal_encoder(encoded_onehot_train_data, ['education'])
     train_data = encoded_ordinal_train_data
     train_data.reset_index(inplace=True)
     train_data.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
+
+    encoded_labelling_test_data = label_encoder(test,
+                                                 ['workclass', 'marital_status', 'occupation', 'relationship', 'race',
+                                                  'native_country'])
+    encoded_onehot_test_data = one_hot_encoder(encoded_labelling_test_data, ['sex'])
+    encoded_ordinal_test_data = ordinal_encoder(encoded_onehot_test_data, ['education'])
+    test = encoded_ordinal_test_data
+    test.reset_index(inplace=True)
+    test.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
+
 
 
     # SMOTE를 적용하려면 인코딩이 끝나야 한다.
@@ -234,10 +250,7 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     # resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
     # # resampled_df[target_col] = resampled_label
 
-
     # 인덱스, id 제거 필요한데 어느 단계에서 하지?
 
+    return train_data, test, label
     print("Debugging Point")
-
-
-
