@@ -34,7 +34,7 @@ if __name__ == "__main__":
     table_name = "adult_income"
 
     # ##### uploading data to PoestgreDB
-    upload_to_db(yaml_file_path=yaml_file_path, data_path=data_path, table_name="adult_income")
+    # upload_to_db(yaml_file_path=yaml_file_path, data_path=data_path, table_name="adult_income")
 
     # ##### Read data from PoestgreDB
     train_data, test, label = read_from_db(
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         table_name=table_name,
         label_col_name=target_col)
 
-    preprocessing.run(train_data, test, label, target_col, verbose=1)
+    preprocessing.run(train_data, test, label, target_col, verbose=0)
 
     # 전처리 결과를 다시 DB에 저장 후 불러온 후에 이어서 진행
     upload_to_db(

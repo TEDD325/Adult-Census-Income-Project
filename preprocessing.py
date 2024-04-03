@@ -1,5 +1,7 @@
 import os
 import warnings
+
+from pandas import DataFrame
 from scipy.stats import chi2_contingency
 import itertools
 import pprint
@@ -10,6 +12,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from imblearn.over_sampling import SMOTE
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
+
 
 def set_initial_setting():
     warnings.filterwarnings(action='ignore')
@@ -30,6 +34,9 @@ def display_info(obj: object = None, msg: str = ""):
 
 
 def eda_result_print(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, num_columns: list, cat_columns: list, target_col: str):
+    display_info(train_data, "Train Data")
+    display_info(test, "Test Data")
+
     display_info(train_data, "Train Data loaded")
     display_info(train_data.head(), "Head of Train Data")
     display_info(train_data.shape, "Shape of Train Data")  # (17480, 17)
@@ -47,7 +54,10 @@ def eda_result_print(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Ser
 
     for col in cat_columns:
         display_info(train_data[col], col)
-        display_info(test[col].describe(), col + "'s Description")
+        tmp_df = train_data[col].describe()
+        display_info(tmp_df, col + "'s Description")
+        ratios = train_data[col].value_counts() / len(train_data[col])
+        display_info(ratios, f"Ratio of {col}.")
         display_info(test[col].unique(), col + "'s Unique Values")
 
     # 결측치 확인
@@ -58,7 +68,7 @@ def eda_result_print(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Ser
 
     # 클래스 imbalanced 확인
     for idx, data in enumerate([train_data]):
-        if idx==0: print("Train imbalanced 확인")
+        if idx==0: print(f"Target:{target_col} imbalanced 확인")
 
         tmp_data = pd.concat([data, label], axis=1)
 
@@ -70,6 +80,43 @@ def eda_result_print(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Ser
             print(f"Value: {value}, Count: {count}, Ratio: {ratio:.4f}")
         print()
     print(end="\n\n")
+
+def label_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    result = df.copy()
+    le = LabelEncoder()
+    for col in columns:
+        le.fit(df[col])
+        label_encoded = le.transform(df[col])
+        result[col] = label_encoded
+        # display_info(le.classes_)
+    return result
+
+def one_hot_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    result = df.copy()
+    ohe = OneHotEncoder()
+
+    # 모든 범주형 변수를 하나의 데이터프레임으로 결합
+    combined_df = pd.DataFrame()
+
+    for col in columns:
+        combined_df[col] = df[col]
+        one_hot_encoded = ohe.fit_transform(combined_df) # OneHotEncoder를 적용하여 모든 범주형 변수를 인코딩
+        ohe_df = pd.DataFrame(one_hot_encoded.toarray(), columns=ohe.get_feature_names_out(combined_df.columns)) # 인코딩 결과를 데이터프레임으로 변환
+        result = pd.concat([result, ohe_df], axis=1) # 결과 데이터프레임과 원본 데이터프레임 결합
+
+        result.drop(col, axis=1, inplace=True)
+    return result
+
+def ordinal_encoder(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    result = df.copy()
+    encoder = OrdinalEncoder()
+
+    # 범주형 변수에 대해 Ordinal Encoding 수행
+    for col in columns:
+        data_encoded = encoder.fit_transform(df[[col]])
+        result[col] = data_encoded
+
+    return result
 
 
 def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_col: str, verbose: int = 0):
@@ -100,22 +147,24 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     missing_cols = train_data.columns[train_data.isna().any()].tolist()
     column_combinations = list(itertools.combinations(missing_cols, 2))
     # column_combinations = list(itertools.combinations(cat_columns, 2))
-    display_info(column_combinations, "column_combinations")
+    if verbose == 1:
+        display_info(column_combinations, "column_combinations")
 
-    for combination in column_combinations:
-        cross_tab = pd.crosstab(train_data[combination[0]], train_data[combination[1]])
-        chi2, p, _, _ = chi2_contingency(cross_tab)
-        # display_info(cross_tab, f"Cross tabulation for columns {combination}")
-        display_info(chi2, f"chi2 for columns {combination}")
-        display_info(p, f"P-value for columns {combination}")
+    if verbose == 1:
+        for combination in column_combinations:
+            cross_tab = pd.crosstab(train_data[combination[0]], train_data[combination[1]])
+            chi2, p, _, _ = chi2_contingency(cross_tab)
+            # display_info(cross_tab, f"Cross tabulation for columns {combination}")
+            display_info(chi2, f"chi2 for columns {combination}")
+            display_info(p, f"P-value for columns {combination}")
 
-        # # 시각화
-        if verbose == 3:
-            sns.heatmap(cross_tab, annot=True, cmap='coolwarm', fmt='g')
-            plt.title('Cross Tabulation Heatmap')
-            plt.show()
+            # # 시각화
+            if verbose == 3:
+                sns.heatmap(cross_tab, annot=True, cmap='coolwarm', fmt='g')
+                plt.title('Cross Tabulation Heatmap')
+                plt.show()
 
-    # 결측치 처리
+    # 결측치 처리: 결측치는 Train 데이터에만 존재함
     # native_country 결측치 처리
     tmp_train_data = train_data.copy()
     tmp_train_data.loc[(tmp_train_data['race'] == 'White') & (tmp_train_data['native_country'].isin([np.nan, None, 'None'])), 'native_country'] = 'United-States'
@@ -123,12 +172,15 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
 
     # workclass 결측치 처리
     tmp_train_data['workclass'] = tmp_train_data['workclass'].fillna('Never-worked')
+    tmp_train_data.loc[tmp_train_data['workclass'].isin([np.nan, None, 'None']), 'workclass'] = 'Never-worked'
 
     # occupation 결측치 처리
     tmp_train_data['occupation'] = tmp_train_data['occupation'].fillna('Others')
+    tmp_train_data.loc[tmp_train_data['occupation'].isin([np.nan, None, 'None']), 'occupation'] = 'Others'
 
     # 결과 확인
-    display_info(pd.isna(tmp_train_data).sum(), "결측치 처리 결과")
+    if verbose == 1:
+        display_info(pd.isna(tmp_train_data).sum(), "결측치 처리 결과")
 
     train_data = tmp_train_data
 
@@ -152,21 +204,27 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     '''
 
     # ENCODING
-    display_info(msg='ENCODING')
+    print(' ##### Encdoing ##### ')
     # categorical column들 중 어느 컬럼에 어느 방법을 적용해야 하는가?
     '''Index(['workclass', 'education', 'marital_status', 'occupation',
        'relationship', 'race', 'sex', 'native_country'],
       dtype='object')'''
     ''' 
-    - Label: 단순 인코딩; 0, 1, 2
-    - One-Hot: 0, 1 값만을 가진 새로운 차원 생성
-    , Ordinal: 순서가 중요한 경우 '''
+    - Label: 단순 인코딩; 0, 1, 2: workclass, marital_status, occupation, relationship, race, native_country
+    - One-Hot: 0, 1 값만을 가진 새로운 차원 생성: sex
+    , Ordinal: 순서가 중요한 경우: education
+    '''
 
-
+    encoded_labelling_train_data = label_encoder(train_data, ['workclass', 'marital_status', 'occupation', 'relationship', 'race', 'native_country'])
+    encoded_onehot_train_data = one_hot_encoder(encoded_labelling_train_data, ['sex'])
+    encoded_ordinal_train_data = ordinal_encoder(encoded_onehot_train_data, ['education'])
+    train_data = encoded_ordinal_train_data
+    train_data.reset_index(inplace=True)
+    train_data.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
 
 
     # SMOTE를 적용하려면 인코딩이 끝나야 한다.
-    # # SMOTE 객체 생성
+    # SMOTE 객체 생성
     # smote = SMOTE(random_state=42)
     #
     # # SMOTE를 적용할 데이터 준비
@@ -175,6 +233,9 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     # # 샘플링된 데이터로 데이터프레임 생성 (예시)
     # resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
     # # resampled_df[target_col] = resampled_label
+
+
+    # 인덱스, id 제거 필요한데 어느 단계에서 하지?
 
     print("Debugging Point")
 
