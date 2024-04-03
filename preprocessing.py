@@ -34,31 +34,31 @@ def display_info(obj: object = None, msg: str = ""):
 
 
 def eda_result_print(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, num_columns: list, cat_columns: list, target_col: str):
-    display_info(train_data, "Train Data")
-    display_info(test, "Test Data")
+    display_info(obj=train_data, msg="Train Data")
+    display_info(obj=test, msg="Test Data")
 
-    display_info(train_data, "Train Data loaded")
-    display_info(train_data.head(), "Head of Train Data")
-    display_info(train_data.shape, "Shape of Train Data")  # (17480, 17)
-    display_info(test.shape, "Shape of Test Data")  # (15081, 16)
-    display_info(train_data.info(), "Info of Train Data")
-    display_info(test.info(), "Info of Test Data")
-    display_info(label.info(), "Info of Label")
-    display_info(train_data.describe(include='all'), "Description of Train Data")
-    display_info(test.describe(include='all'), "Description of Test Data")
+    display_info(obj=train_data, msg="Train Data loaded")
+    display_info(obj=train_data.head(), msg="Head of Train Data")
+    display_info(obj=train_data.shape, msg="Shape of Train Data")  # (17480, 17)
+    display_info(obj=test.shape, msg="Shape of Test Data")  # (15081, 16)
+    display_info(obj=train_data.info(), msg="Info of Train Data")
+    display_info(obj=test.info(), msg="Info of Test Data")
+    display_info(obj=label.info(), msg="Info of Label")
+    display_info(obj=train_data.describe(include='all'), msg="Description of Train Data")
+    display_info(obj=test.describe(include='all'), msg="Description of Test Data")
 
     for col in num_columns:
-        display_info(train_data[col], col)
-        display_info(train_data[col].describe(), col + "'s Description")
-        display_info(train_data[col].unique(), col + "'s Unique Values")
+        display_info(obj=train_data[col], msg=col)
+        display_info(obj=train_data[col].describe(), msg=col + "'s Description")
+        display_info(obj=train_data[col].unique(), msg=col + "'s Unique Values")
 
     for col in cat_columns:
-        display_info(train_data[col], col)
+        display_info(obj=train_data[col], msg=col)
         tmp_df = train_data[col].describe()
-        display_info(tmp_df, col + "'s Description")
+        display_info(obj=tmp_df, msg=col + "'s Description")
         ratios = train_data[col].value_counts() / len(train_data[col])
-        display_info(ratios, f"Ratio of {col}.")
-        display_info(test[col].unique(), col + "'s Unique Values")
+        display_info(obj=ratios, msg=f"Ratio of {col}.")
+        display_info(obj=test[col].unique(), msg=col + "'s Unique Values")
 
     # 결측치 확인
     display_info(cat_columns, "Cat Columns")
@@ -173,6 +173,13 @@ def numeric_transformer(df: pd.DataFrame, columns: list, strategy: str = 'B', vi
 
     return result
 
+def control_imbalance(train_data: pd.DataFrame, label: pd.Series, seed: int = 42) -> pd.DataFrame:
+    smote = SMOTE(random_state=seed)
+    resampled_train, resampled_label = smote.fit_resample(train_data, label)
+    resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
+
+    return resampled_train
+
 def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_col: str, verbose: int = 0):
     # yaml_file_path = os.path.dirname(os.path.realpath(__file__)) + '/info.yaml'
     # target_col = 'target'
@@ -202,15 +209,15 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     column_combinations = list(itertools.combinations(missing_cols, 2))
     # column_combinations = list(itertools.combinations(cat_columns, 2))
     if verbose == 1:
-        display_info(column_combinations, "column_combinations")
+        display_info(obj=column_combinations, msg="column_combinations")
 
     if verbose == 1:
         for combination in column_combinations:
             cross_tab = pd.crosstab(train_data[combination[0]], train_data[combination[1]])
             chi2, p, _, _ = chi2_contingency(cross_tab)
             # display_info(cross_tab, f"Cross tabulation for columns {combination}")
-            display_info(chi2, f"chi2 for columns {combination}")
-            display_info(p, f"P-value for columns {combination}")
+            display_info(obj=chi2, msg=f"chi2 for columns {combination}")
+            display_info(obj=p, msg=f"P-value for columns {combination}")
 
             # # 시각화
             if verbose == 3:
@@ -234,7 +241,7 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
 
     # 결과 확인
     if verbose == 1:
-        display_info(pd.isna(tmp_train_data).sum(), "결측치 처리 결과")
+        display_info(obj=pd.isna(tmp_train_data).sum(), msg="결측치 처리 결과")
 
     train_data = tmp_train_data
 
@@ -247,7 +254,14 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
         print(f'KeyError: [{drop_col}] not found in axis"')
 
     if verbose == 1:
-        eda_result_print(train_data, test, label, num_columns, cat_columns, target_col)
+        eda_result_print(
+            train_data=train_data,
+            test=test,
+            label=label,
+            num_columns=num_columns,
+            cat_columns=cat_columns,
+            target_col=target_col
+        )
     # 레이블이 0인 데이터가 레이블이 1인 데이터보다 약 3배 정도 많다.
     '''
     imbalanced 처리 방법
@@ -273,20 +287,20 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
     , Ordinal: 순서가 중요한 경우: education
     '''
 
-    encoded_labelling_train_data = label_encoder(train_data,
-                                                 ['workclass', 'marital_status', 'occupation', 'relationship', 'race',
+    encoded_labelling_train_data = label_encoder(df=train_data,
+                                                 columns=['workclass', 'marital_status', 'occupation', 'relationship', 'race',
                                                   'native_country'])
-    encoded_onehot_train_data = one_hot_encoder(encoded_labelling_train_data, ['sex'])
-    encoded_ordinal_train_data = ordinal_encoder(encoded_onehot_train_data, ['education'])
+    encoded_onehot_train_data = one_hot_encoder(df=encoded_labelling_train_data, columns=['sex'])
+    encoded_ordinal_train_data = ordinal_encoder(df=encoded_onehot_train_data, columns=['education'])
     train_data = encoded_ordinal_train_data
     train_data.reset_index(inplace=True)
     train_data.drop(['index', 'id', 'level_0'], axis=1, inplace=True)
 
-    encoded_labelling_test_data = label_encoder(test,
-                                                 ['workclass', 'marital_status', 'occupation', 'relationship', 'race',
+    encoded_labelling_test_data = label_encoder(df=test,
+                                                 columns=['workclass', 'marital_status', 'occupation', 'relationship', 'race',
                                                   'native_country'])
-    encoded_onehot_test_data = one_hot_encoder(encoded_labelling_test_data, ['sex'])
-    encoded_ordinal_test_data = ordinal_encoder(encoded_onehot_test_data, ['education'])
+    encoded_onehot_test_data = one_hot_encoder(df=encoded_labelling_test_data, columns=['sex'])
+    encoded_ordinal_test_data = ordinal_encoder(df=encoded_onehot_test_data, columns=['education'])
     test = encoded_ordinal_test_data
     test.reset_index(inplace=True)
     drop_col = ['index', 'id', 'level_0']
@@ -295,25 +309,13 @@ def run(train_data: pd.DataFrame, test: pd.DataFrame, label: pd.Series, target_c
         if col in num_columns:
             num_columns = num_columns.drop(col)
 
-    train_data = standard_scaler(train_data, num_columns)
-    test = standard_scaler(test, num_columns)
+    train_data = standard_scaler(df=train_data, columns=num_columns)
+    test = standard_scaler(df=test, columns=num_columns)
 
     train_data = numeric_transformer(df=train_data, columns=num_columns, strategy='Q', viz_available=True)
     test = numeric_transformer(df=test, columns=num_columns, strategy='Q', viz_available=True)
 
-
-
-    # # SMOTE를 적용하려면 인코딩이 끝나야 한다.
-    # # SMOTE 객체 생성
-    # smote = SMOTE(random_state=42)
-    #
-    # # SMOTE를 적용할 데이터 준비
-    # resampled_train, resampled_label = smote.fit_resample(train_data, label)
-    #
-    # # 샘플링된 데이터로 데이터프레임 생성 (예시)
-    # resampled_train = pd.DataFrame(resampled_train, columns=train_data.columns)
-
-    # 인덱스, id 제거 필요한데 어느 단계에서 하지?
+    train_data = control_imbalance(train_data=train_data, label=label)
 
     print("Debugging Point")
 
