@@ -44,8 +44,8 @@ def objective(trial):
         'min_child_weight': trial.suggest_loguniform('min_child_weight', 0.7, 1.0),
         'subsample': trial.suggest_uniform('subsample', 0.7, 1.0),  # Bagging fraction
         'colsample_bytree': trial.suggest_uniform('colsample_bytree', 0.7, 1.0),  # Feature fraction
-        'reg_alpha': trial.suggest_loguniform('reg_alpha', 0.0, 1.0),  # L1 regularization
-        'reg_lambda': trial.suggest_loguniform('reg_lambda', 0.0, 1.0),  # L2 regularization
+        'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-8, 1.0),  # L1 regularization
+        'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-8, 1.0),  # L2 regularization
         'random_state': 42  # Fixed random state for reproducibility
     }
 
@@ -61,8 +61,8 @@ def objective(trial):
         y_train, y_valid = label[train_index], label[test_index]
 
         # Train model with current hyperparameters
-        model = LGBMClassifier(**params, thread_count=n_jobs)
-        model.fit(x_train, y_train, verbose=False)
+        model = LGBMClassifier(**params, thread_count=n_jobs,verbose=-1)
+        model.fit(x_train, y_train)
 
         # Calculate validation accuracy
         val_accuracy = model.score(x_valid, y_valid)
@@ -87,14 +87,14 @@ if __name__ == "__main__":
 
     # Define study object and optimize hyperparameters
     study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=100)
 
     # Get best hyperparameters
     best_params = study.best_params
 
     # Train final model with best hyperparameters
     model = LGBMClassifier(**best_params, thread_count=n_jobs)
-    model.fit(train_data, label, verbose=False)
+    model.fit(train_data, label)
 
     # Make predictions
     y_pred = model.predict(test)
