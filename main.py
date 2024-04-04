@@ -34,22 +34,27 @@ def save_submission_file(test_id, y_pred, submission_file_path):
 def objective(trial):
     # Define hyperparameters to be optimized
     params = {
-        'iterations': trial.suggest_int('iterations', 100, 1000),
-        'learning_rate': trial.suggest_loguniform('learning_rate', 0.001, 0.1),
-        'depth': trial.suggest_int('depth', 1, 10),
+        # 'iterations': trial.suggest_int('iterations', 300, 1000),
+        'iterations': 937, # 386
+        # 'learning_rate': trial.suggest_loguniform('learning_rate', 0.001, 0.1),
+        'learning_rate': 0.066, # 0.095
+        # 'depth': trial.suggest_int('depth', 2, 10),
+        'depth': 9, # 10
         'random_state': 42,
-        # 'l2_leaf_reg'
-        # 'random_strength'
-        # 'bagging_temperature'
-        # 'border_count'
-        # 'leaf_estimation_method'
+        # 'l2_leaf_reg': trial.suggest_loguniform('l2_leaf_reg', 0.1, 10.0),
+        # 'random_strength': trial.suggest_uniform('random_strength', 0.0, 1.0),
+        # 'bagging_temperature': trial.suggest_uniform('bagging_temperature', 0.0, 1.0),
+        # 'border_count': trial.suggest_int('border_count', 50, 255),
+        # 'leaf_estimation_method': trial.suggest_categorical('leaf_estimation_method', ['Newton', 'Gradient']),
         'verbose': 100
     }
+    # [I 2024-04-03 11:17:43,802] Trial 6 finished with value: 0.8980750499191027 and parameters: {'iterations': 937, 'learning_rate': 0.0655074888900418, 'depth': 9}. Best is trial 6 with value: 0.8980750499191027.
+    # Trial 21 finished with value: 0.8859549295797973 and parameters: {'iterations': 368, 'learning_rate': 0.09502626806080669, 'depth': 10}. Best is trial 6 with value: 0.8980750499191027.
 
     # Initialize StratifiedKFold
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-    # Initialize array to store average validation accuracy
+    # Initialize array to store average validation accuracys
     avg_val_accuracy = []
 
     # Perform cross validation
@@ -83,15 +88,31 @@ if __name__ == "__main__":
     train_data, test, label = preprocess_data(train_data, test, label, 'target')
 
     # Define study object and optimize hyperparameters
-    study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=100)
+    # study = optuna.create_study(direction='maximize')
+    # study.optimize(objective, n_trials=5)
 
     # Get best hyperparameters
-    best_params = study.best_params
+    # best_params = study.best_params
+    best_params = {
+        'learning_rate': 0.05569734266093502,
+         'l2_leaf_reg': 2.6630610410630625e-05,
+         'od_type': 'IncToDec',
+         'random_strength': 36,
+         'boosting_type': 'Ordered',
+         'bootstrap_type': 'MVS',
+         'max_depth': 15,
+         'n_estimators': 7651,
+         'colsample_bylevel': 0.04351494898046096,
+         'objective': 'Logloss',
+         'max_bin': 322,
+         'min_child_samples': 96}
 
     # Train final model with best hyperparameters
     model = CatBoostClassifier(**best_params, thread_count=n_jobs)
-    model.fit(train_data, label, verbose=False)
+    model.fit(train_data, label, verbose=True)
+
+    # Save Best Parameters
+    # ** best_params
 
     # Make predictions
     y_pred = model.predict(test)
