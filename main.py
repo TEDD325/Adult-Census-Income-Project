@@ -1,16 +1,3 @@
-# 실행 환경에 따른 설정(필수)
-# env = "colab"
-env = "local"
-
-# 모델 선택
-model_name = 'catboost'
-# model_name = 'xgboost'
-# model_name = 'lightgbm' # GPU 지원 X
-# model_name = 'tabnet' # 사용 X
-
-# tunning = True
-tunning = False
-
 # 필요한 라이브러리 임포트
 import os
 import warnings
@@ -35,7 +22,8 @@ import seaborn as sns
 
 from scipy.stats import chi2_contingency
 from imblearn.over_sampling import SMOTE
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, StandardScaler, MinMaxScaler, PowerTransformer, QuantileTransformer
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, StandardScaler, MinMaxScaler, \
+    PowerTransformer, QuantileTransformer
 from sklearn.model_selection import StratifiedKFold
 
 import optuna
@@ -46,7 +34,6 @@ import pprint
 import torch
 from torch.utils.data import TensorDataset
 from pytorch_tabnet.tab_model import TabNetClassifier
-
 
 # CPU 코어 수 계산
 n_cpus = multiprocessing.cpu_count()
@@ -63,7 +50,6 @@ X_test = None
 Y_train = None
 
 
-import yaml
 
 class Utils:
     def __init__(self):
@@ -83,6 +69,7 @@ class Utils:
         with open(file_path, 'r') as file:
             data = yaml.safe_load(file)
         return data
+
 
 def read_from_db(yaml_file_path: str, table_name: str, label_col_name: str):
     try:
@@ -111,8 +98,44 @@ def read_from_db(yaml_file_path: str, table_name: str, label_col_name: str):
     except Exception as e:
         print(f"An error occurred during reading from the database: {e}")
 
-def upload_to_db(yaml_file_path: str, table_name: str, data_path: str = None,
+class PostgreDB:
+
+def postgre_db_engine(db_info):
+    db_url = f"postgresql+psycopg2://{db_info['db']['id']}:{db_info['db']['pw']}@" \
+             f"{db_info['db']['host']}:{db_info['db']['port']}/{db_info['db']['table']}"
+    engine = create_engine(url=db_url)
+
+    return engine
+
+def upload_dataset_to_db(yaml_file_path: str, table_name: str, data_path: str = None,
                  train_df: pd.DataFrame = None, test_df: pd.DataFrame = None):
+    try:
+        # YAML 파일에서 데이터베이스 정보 읽기
+        with open(yaml_file_path, 'r') as file:
+            db_info = yaml.safe_load(file)
+
+        # 데이터 경로가 제공되지 않은 경우 예외 발생
+        if not data_path and not train_df and not test_df:
+            raise ValueError("Please provide the parameter data_path, train_df, or test_df")
+
+        # 데이터베이스 연결 엔진 생성
+        engine = postgre_db_engine(db_info)
+
+        # 데이터프레임을 데이터베이스에 업로드
+        if data_path:
+            train_df = pd.read_csv(os.path.join(data_path, 'train.csv'))
+            test_df = pd.read_csv(os.path.join(data_path, 'test.csv'))
+
+        if train_df is not None:
+            train_df.to_sql(f"{table_name}_train", engine, if_exists='append', index=False)
+        if test_df is not None:
+            test_df.to_sql(f"{table_name}_test", engine, if_exists='append', index=False)
+
+        print("Data uploaded to database successfully.")
+    except Exception as e:
+        print(f"An error occurred during database upload: {e}")
+
+def upload_model_param_to_db(yaml_file_path: str, table_name: str, model_param, data_path: str = None):
     try:
         # YAML 파일에서 데이터베이스 정보 읽기
         with open(yaml_file_path, 'r') as file:
@@ -141,7 +164,6 @@ def upload_to_db(yaml_file_path: str, table_name: str, data_path: str = None,
     except Exception as e:
         print(f"An error occurred during database upload: {e}")
 
-
 def optimize_pandas_dtypes(pd_obj: pd.DataFrame | pd.Series) -> pd.DataFrame | pd.Series:
     tmp_pd_obj = pd_obj.copy()
 
@@ -163,6 +185,7 @@ def optimize_pandas_dtypes(pd_obj: pd.DataFrame | pd.Series) -> pd.DataFrame | p
 
     return tmp_pd_obj
 
+
 # age
 def map_age(value):
     if value <= 33:
@@ -181,6 +204,7 @@ def map_age(value):
     else:
         return 3
 
+
 def map_education(value):
     if value <= 8:
         return 1
@@ -191,6 +215,7 @@ def map_education(value):
     else:
         return 4
 
+
 def map_workclass(value):
     if value in ['Never-worked', 'Without-pay', 'NAN']:
         return 0
@@ -199,11 +224,13 @@ def map_workclass(value):
     else:
         return 2
 
+
 def map_martial(value):
     if value in ['Married-AF-spouse', 'Married-civ-spouse']:
         return 1
     else:
         return 0
+
 
 def map_country(value):
     if value in ['Iran', 'Yugoslavia', 'India', 'Japan', 'Greece', 'Canada', 'Italy', 'England']:
@@ -431,7 +458,7 @@ def separate_columns(train_data):
     return cat_columns, num_columns
 
 
-def apply_chi2_analysis(train_data, target_col, verbose:int = 0):
+def apply_chi2_analysis(train_data, target_col, verbose: int = 0):
     """Apply Chi-squared analysis to column combinations."""
     column_combinations = list(itertools.combinations(target_col, 2))
     if verbose == 1:
@@ -561,7 +588,7 @@ def preprocess(train_data: pd.DataFrame, valid_data: pd.DataFrame, test_data: pd
     tmp_test_data['hours_per_week'] = trans.transform(tmp_test_data['hours_per_week'].values.reshape(-1, 1))
 
     # normalize
-    scaler = MinMaxScaler()  # 이상치에 더 강한 양상을 보이는 scaler
+    scaler = MinMaxScaler()  # 이상치에 더 강한 양상을 보이는 scaler 
     num_col = ['capital_gain', 'capital_loss', 'hours_per_week']
 
     tmp_train_data[num_col] = scaler.fit_transform(tmp_train_data[num_col])
@@ -702,7 +729,6 @@ def preprocess(train_data: pd.DataFrame, valid_data: pd.DataFrame, test_data: pd
     tmp_test_data = optimize_pandas_dtypes(pd_obj=tmp_test_data)
     y_train = optimize_pandas_dtypes(pd_obj=y_train)
 
-
     return tmp_train_data, tmp_valid_data, tmp_test_data, y_train
 
 
@@ -779,10 +805,11 @@ def save_best_params(model_name: str, model, file_path):
         best_params = model.get_booster().attributes()
     elif model_name == 'lightgbm':
         best_params = model.get_params()
-    elif  model_name == 'tabnet':
+    elif model_name == 'tabnet':
         best_params = model.get_params()
     save_parameters(model_name, best_params, file_path=f"{file_path}")
     return best_params
+
 
 def create_model(model_name, params, n_jobs):
     if model_name == 'catboost':
@@ -801,7 +828,8 @@ def create_model(model_name, params, n_jobs):
     return model
 
 
-def train_model(model_name, model, x_train: pd.DataFrame, y_train: pd.DataFrame, x_valid: pd.DataFrame = None, y_valid: pd.DataFrame = None, verbose: bool = False,
+def train_model(model_name, model, x_train: pd.DataFrame, y_train: pd.DataFrame, x_valid: pd.DataFrame = None,
+                y_valid: pd.DataFrame = None, verbose: bool = False,
                 early_stopping_rounds: int = 100):
     if model_name == 'catboost':
         model.fit(
@@ -834,7 +862,8 @@ def train_model(model_name, model, x_train: pd.DataFrame, y_train: pd.DataFrame,
     return model
 
 
-def train_and_evaluate(model_name: str, x_train: pd.DataFrame, y_train: pd.Series, x_test: pd.DataFrame, y_test: pd.Series,
+def train_and_evaluate(model_name: str, x_train: pd.DataFrame, y_train: pd.Series, x_test: pd.DataFrame,
+                       y_test: pd.Series,
                        params: dict, n_jobs: int, verbose: bool = False, early_stopping_rounds: int = 100,
                        extract_best_model: bool = False):
     """
@@ -855,14 +884,16 @@ def train_and_evaluate(model_name: str, x_train: pd.DataFrame, y_train: pd.Serie
     - float: Mean validation accuracy.
     """
     model = create_model(model_name=model_name, params=params, n_jobs=n_jobs)
-    model = train_model(model_name, model, x_train, y_train, x_test, y_test, verbose=verbose, early_stopping_rounds=early_stopping_rounds)
+    model = train_model(model_name, model, x_train, y_train, x_test, y_test, verbose=verbose,
+                        early_stopping_rounds=early_stopping_rounds)
 
     val_accuracy = model.score(x_test, y_test)
 
     return np.mean(val_accuracy)
 
 
-def train_tabnet(train_data, label, test, params, n_jobs=1, verbose=False, early_stopping_rounds=None, extract_best_model=False):
+def train_tabnet(train_data, label, test, params, n_jobs=1, verbose=False, early_stopping_rounds=None,
+                 extract_best_model=False):
     # TabNet 모델 초기화
     tabnet_model = TabNetClassifier(**params)
 
@@ -901,7 +932,7 @@ def objective(trial, model_name):
     # model_name = trial.suggest_categorical('model_name', ['catboost', 'xgboost', 'lightgbm'])
 
     if model_name != 'tabnet':
-    # Initialize StratifiedKFold
+        # Initialize StratifiedKFold
         skf = StratifiedKFold(
             n_splits=5,  # todo: n_splits
             shuffle=True,
@@ -998,7 +1029,8 @@ def objective(trial, model_name):
             X_test = x_test
             Y_train = y_train
 
-            val_accuracy = train_and_evaluate(model_name, x_train, y_train, x_valid, y_valid, params, n_jobs=n_jobs, verbose=False,
+            val_accuracy = train_and_evaluate(model_name, x_train, y_train, x_valid, y_valid, params, n_jobs=n_jobs,
+                                              verbose=False,
                                               early_stopping_rounds=100, extract_best_model=True)
             avg_val_accuracy.append(val_accuracy)
 
@@ -1055,13 +1087,18 @@ if __name__ == "__main__":
     #
     # model_name = sys.argv[1].lower()
 
-    # model_name = 'catboost'
+    # 실행 환경에 따른 설정(필수)
+    # env = "colab"
+    env = "local"
+
+    # 모델 선택
+    model_name = 'catboost'
     # model_name = 'xgboost'
-    # model_name = 'lightgbm'
-    # model_name = 'tabnet'
+    # model_name = 'lightgbm' # GPU 지원 X
+    # model_name = 'tabnet' # 사용 X
 
     # tunning = True
-    # tunning = False
+    tunning = False
 
     if model_name not in ['catboost', 'xgboost', 'lightgbm', 'tabnet']:
         print("Model name must be one of 'catboost', 'xgboost', 'lightgbm', 'tabnet'")
@@ -1105,7 +1142,7 @@ if __name__ == "__main__":
             sampler=optuna.samplers.TPESampler(),
             pruner=optuna.pruners.MedianPruner()
         )
-        study.optimize(lambda trial: objective(trial, model_name), n_trials=1) # todo
+        study.optimize(lambda trial: objective(trial, model_name), n_trials=100)  # todo
 
         best_params = study.best_params
 
@@ -1115,7 +1152,9 @@ if __name__ == "__main__":
     X_test = x_test
     Y_train = y_train
 
-    best_params = {'task_type': 'GPU','devices': '0','iterations': 937, 'learning_rate': 0.08792393842837028, 'depth': 10, 'l2_leaf_reg': 0.4963956948794404, 'random_strength': 0.15890188094827148, 'bagging_temperature': 0.07307433884939663, 'border_count': 224, 'leaf_estimation_method': 'Newton'}
+    best_params = {'task_type': 'GPU', 'devices': '0', 'iterations': 937, 'learning_rate': 0.08792393842837028,
+                   'depth': 10, 'l2_leaf_reg': 0.4963956948794404, 'random_strength': 0.15890188094827148,
+                   'bagging_temperature': 0.07307433884939663, 'border_count': 224, 'leaf_estimation_method': 'Newton'}
     best_model = create_model(model_name=model_name, params=best_params, n_jobs=n_jobs)
     best_trained_model = train_model(model_name, best_model, X_train, Y_train)
 
@@ -1137,5 +1176,7 @@ if __name__ == "__main__":
         y_pred=y_pred_argmax,
         submission_file_path=f'{base_path}/submission/'
     )
+
+
 
     print("Finished.")
