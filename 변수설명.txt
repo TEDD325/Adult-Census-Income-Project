@@ -1,0 +1,150 @@
+ 1. train.csv : 학습 데이터
+
+  id : 샘플 아이디
+
+  age : 나이
+
+  workclass : 일 유형       
+     ['Private', 'State-gov', 'Local-gov', 'Self-emp-not-inc',
+   'Self-emp-inc', 'Federal-gov', 'Without-pay', nan, 'Never-worked'],
+    [ 민간,      주정부     , 지방정부,     자영업,
+    자영업,        연방정부,      무급,      nan,    일한적없음']
+
+    federal > state > local
+
+   총 9개 (nan 포함x)
+
+
+  fnlwgt : CPS(Current Population Survey) 가중치
+    ['Assoc-acdm', 'Some-college', 'Bachelors', 'HS-grad',
+   'Prof-school', '10th', '11th', 'Masters', '7th-8th', '1st-4th',
+   'Assoc-voc', '5th-6th', 'Doctorate', '9th', '12th', 'Preschool'],
+    [2년제 전문대,     대학 일부 수강,   학사학위,     고졸,
+    전문직학위 ,  고딩10학년, 고딩11학년, 석사학위, 중딩 7-8학년, 초딩 1-4학년,
+    2년제 직업학교, 초딩5-6학년, 박사학위, 중딩9학년, 고딩12학년, 유치원]
+
+   총 16개 (nan포함x)
+
+
+  education : 교육수준
+  ['Craft-repair', 'Exec-managerial', 'Adm-clerical',
+   'Prof-specialty', 'Machine-op-inspct', 'Other-service', 'Sales',
+   'Farming-fishing', 'Transport-moving', 'Handlers-cleaners',
+   'Tech-support', 'Protective-serv', 'Priv-house-serv',
+   'Armed-Forces', nan]       
+
+   총 14개 (nan포함x)
+
+
+  education.num : 교육수준 번호
+
+
+  marital.status : 결혼 상태
+  ['Married-civ-spouse', 'Never-married', 'Divorced', 'Separated',
+   'Married-AF-spouse', 'Married-spouse-absent', 'Widowed'],
+  [   기혼,                 미혼,           이혼    , 별거(아직 이혼전),
+    기혼,             ,    기혼(현 거주지가 다름) ,   과부   ]
+
+    총 7개
+
+
+  occupation : 직업
+  ['Craft-repair', 'Exec-managerial', 'Adm-clerical',
+   'Prof-specialty', 'Machine-op-inspct', 'Other-service', 'Sales',
+   'Farming-fishing', 'Transport-moving', 'Handlers-cleaners',
+   'Tech-support', 'Protective-serv', 'Priv-house-serv',
+   'Armed-Forces', nan]
+   [생산, 운송, 저장, 건설 작업원, 임원 및 관리직,    사무직,
+    전문직,        , 기계 조작 및 검사 직종, 기타서비스직, 판매원,
+    농업 및 어업,     운송업            , 운반 및 청소 ,
+    기술지원,        보안,           , 가정 서비스   ,
+    군인           ]
+
+    총 14개
+
+
+  relationship : 가족관계
+  ['Husband', 'Own-child', 'Not-in-family', 'Unmarried', 'Wife',
+   'Other-relative']
+  [남편   ,      자녀    ,  가족이 아님  ,  미혼      ,  아내  ,
+   친척           ]    
+
+   총 6개
+
+
+  race : 인종
+  ['White', 'Black', 'Asian-Pac-Islander', 'Amer-Indian-Eskimo',
+   'Other']
+  [백인   , 흑인   ,   아시아인         ,   아메리카 원주민 + 에스키모,
+   그 외  ]
+
+   총 5개
+
+
+  sex : 성별
+  ['Male', 'Female']
+  남 여
+  총 2개
+
+
+  capital.gain : 자본 이익
+
+  capital.loss : 자본 손실
+
+  hours.per.week : 주당 근무시간
+
+  native.country : 본 국적
+  ['United-States', 'Poland', 'Mexico', 'Ireland', 'Guatemala',
+   'Dominican-Republic', 'Greece', 'El-Salvador', 'Portugal',
+   'Canada', 'Philippines', 'India', 'Italy', 'England', 'Jamaica',
+   'Columbia', 'South', 'Vietnam', 'Cuba', 'Laos', 'Hong', 'Haiti',
+   'Germany', 'Yugoslavia', 'Ecuador', 'France', 'Puerto-Rico',
+   'Outlying-US(Guam-USVI-etc)', 'Taiwan', 'China', 'Japan',
+   'Honduras', 'Peru', 'Nicaragua', 'Hungary', 'Cambodia', 'Iran',
+   'Trinadad&Tobago', 'Thailand', 'Scotland', 'Holand-Netherlands',
+   nan]
+  [ 미국        ,  폴란드   , 멕시코  ,  아일랜드 , 과테말라,
+   도미니카공화국,  그리스,    엘살바도르,     포르투갈,
+   캐나다,    필리핀   ,   인도,   이탈리아,   영국,   자메이카,
+   콜롬비아,   남쪽의나라(?), 베트남, 쿠바, 라오스, 홍콩, 하이티,
+   독일,  유고슬라비아,  에콰도르,  프랑스,  푸에르토리코,
+   미국주가아닌 미국영토, 대만,  중국,  일본,
+   온두라스,  페루,  니카라과, 헝가리, 캄보디아, 이란,
+   트리니다드토바고, 태국, 스코틀랜드, 네덜란드,
+   nan]
+   총 41개
+
+
+  target : 소득
+              0 = <=50K (5만 달러 이하)
+
+              1 = >50K (5만 달러 초과)
+
+
+
+  2. test.csv : 테스트 데이터
+
+  id : 샘플 아이디
+  age : 나이
+  workclass : 일 유형
+  fnlwgt : CPS(Current Population Survey) 가중치
+  education : 교육수준
+  education.num : 교육수준 번호
+  marital.status : 결혼 상태
+  occupation : 직업
+  relationship : 가족관계
+  race : 인종
+  sex : 성별
+  capital.gain : 자본 이익
+  capital.loss : 자본 손실
+  hours.per.week : 주당 근무시간
+  native.country : 본 국적
+
+
+  3. sample_submission.csv : 제출 양식
+
+  id : 샘플 아이디
+  target : 소득
+              0 = <=50K (5만 달러 이하)
+
+              1 = >50K (5만 달러 초과)
